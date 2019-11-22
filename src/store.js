@@ -259,6 +259,7 @@ const store = new Vuex.Store({
           })
           .catch(e => {
             console.log(e)
+            commit('setBalanceLoading', false)
           })
       }
       return 0
@@ -267,13 +268,9 @@ const store = new Vuex.Store({
       commit(
         'setAe',
         await Ae({
-          url: 'https://blockchain.apeunit.com',
-          internalUrl: 'https://blockchain.apeunit.com',
-          networkId: 'ae_uat', // or any other networkId your client should connect to
-          keypair: {
-            secretKey: '',
-            publicKey: ''
-          }
+          url: 'https://testnet.aeternal.io',
+          internalUrl: 'https://testnet.aeternal.io',
+          compilerUrl: 'https://compiler.aepps.com'
         })
       )
     },
@@ -283,7 +280,7 @@ const store = new Vuex.Store({
        */
       let spendTx = null
       try {
-        store.commit('setAccount', state.account)
+        // store.commit('setAccount', state.account)
         spendTx = await getters.client.spend(amount, receiver)
       } catch (e) {
         console.log(e)

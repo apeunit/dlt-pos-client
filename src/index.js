@@ -24,39 +24,10 @@ const i18n = new VueI18n({
   messages: store.state.i18nTexts // set locale messages
 })
 
-Vue.use(new VueSocketIO({
-  debug: true,
-  connection: store.state.websocketUrl,
-  vuex: {
-    store,
-    actionPrefix: 'SOCKET_',
-    mutationPrefix: 'SOCKET_'
-  }
-}))
-
 store.dispatch('initAe')
 new Vue({
   i18n,
   router: getRouter(store),
   store,
-  sockets: {
-    connect () {
-      // console.log('socket connected')
-      // set the initial bar state after connecting
-      // console.log('asking bar state')
-      this.$socket.emit('get_bar_state', (barState) => {
-        console.log('get_bar_state', barState)
-        if (barState && barState.state) {
-          store.commit('setBarState', barState.state)
-        }
-      })
-    }
-  },
-  render: h => h(App),
-  mounted () {
-    this.sockets.subscribe('bar_state', (status) => {
-      console.log(`bar is now ${status.state}`)
-      this.$store.commit('setBarState', status.state)
-    })
-  }
+  render: h => h(App)
 }).$mount('#app')
