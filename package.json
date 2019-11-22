@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "NODE_ENV='prod' webpack -p --optimize-minimize --optimize-dedupe",
-    "start:dev": "NODE_ENV='dev' webpack-dev-server --host 0.0.0.0",
+    "start:dev": "NODE_ENV='dev' webpack-dev-server --host 0.0.0.0 --port 3001",
     "start": "node server.js"
   },
   "repository": "https://github.com/aeternity/web-aepp",
@@ -14,7 +14,7 @@
   "license": "ISC",
   "dependencies": {
     "@aeternity/aepp-components": "^2.0.15",
-    "@aeternity/aepp-sdk": "^2.3.2",
+    "@aeternity/aepp-sdk": "6.1.2",
     "@chenfengyuan/vue-qrcode": "^1.0.0",
     "bignumber.js": "8.1.1",
     "isomorphic-fetch": "^2.2.1",
