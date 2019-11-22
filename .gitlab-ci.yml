@@ -25,7 +25,7 @@ deploy prod:
     - tags
   script:
     - pip install awscli
-    - aws s3 sync ./dist s3://icecream.apeunit.com
+    - aws s3 sync ./dist s3://take.apeun.it
 
 build stage:
   image: node:10.15.0-stretch
@@ -50,5 +50,5 @@ deploy stage:
     - develop
   script:
     - pip install awscli
-    - aws s3 sync ./dist s3://icecream.apeunit.com
-    - aws cloudfront create-invalidation --distribution-id $CF_DISTRIBUTION_ID --paths '/*'
+    - aws s3 sync ./dist s3://take.apeun.it
+    #- aws cloudfront create-invalidation --distribution-id $CF_DISTRIBUTION_ID --paths '/*'

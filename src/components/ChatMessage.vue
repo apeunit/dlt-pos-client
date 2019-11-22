@@ -37,7 +37,7 @@
 import formatUnit from '../filters'
 
 import { sign, verify, decodeBase58Check } from '@aeternity/aepp-sdk/es/utils/crypto.js'
-import { encode } from '@aeternity/aepp-sdk/es/tx/builder/helpers.js'
+import { encode, decode } from '@aeternity/aepp-sdk/es/tx/builder/helpers.js'
 import QrCode from './QrCode.vue'
 
 export default {
@@ -209,7 +209,6 @@ export default {
 
       const order2 = this.chatMessagesList[this.$i18n.locale].find(o => o.id === 'post-order-message-2')
       this.$store.commit('addMessage', { message: order2, lang: this.$i18n.locale })
-
       const txHash    = await this.$store.dispatch('transfer', {
         amount: this.costToCharge,
         receiver: this.$store.state.barPubKey
@@ -277,7 +276,7 @@ export default {
       }
     },
     signHash (txHash, privateKey) {
-      const sig        = sign(Buffer.from(txHash), Buffer.from(privateKey, 'hex'))
+      const sig        = sign(decode(txHash), Buffer.from(privateKey, 'hex'))
       const encodedSig = encode(sig, 'sg')
       console.log('signHash encoded', encodedSig)
       return encodedSig
