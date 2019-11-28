@@ -36,9 +36,10 @@
 <script>
 import formatUnit from '../filters'
 
-import { sign, verify, decodeBase58Check } from '@aeternity/aepp-sdk/es/utils/crypto.js'
+import { sign } from '@aeternity/aepp-sdk/es/utils/crypto.js'
 import { encode, decode } from '@aeternity/aepp-sdk/es/tx/builder/helpers.js'
 import QrCode from './QrCode.vue'
+import merchantContract from '../../contract/merchant'
 
 export default {
   name: 'ChatMessage',
@@ -209,9 +210,11 @@ export default {
 
       const order2 = this.chatMessagesList[this.$i18n.locale].find(o => o.id === 'post-order-message-2')
       this.$store.commit('addMessage', { message: order2, lang: this.$i18n.locale })
-      const txHash    = await this.$store.dispatch('transfer', {
+      const cInstance = await this.$store.state.ae.getContractInstance(merchantContract, { contractAddress: 'ct_WbMSB4FySwzJhCmNsDjxm5P7nefMJGdzuoxc3VfUhzsTyvta2' })
+      const { decodedResult: barAddress } = await cInstance.methods.get_merchant()
+      const txHash = await this.$store.dispatch('transfer', {
         amount: this.costToCharge,
-        receiver: this.$store.state.barPubKey
+        receiver: barAddress
       })
 
       if(!txHash) {
