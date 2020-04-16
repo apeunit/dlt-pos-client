@@ -8,8 +8,6 @@ build prod:
   only:
     - tags
   script:
-    # Install vuecli
-    - npm install -g @vue/cli@latest
     # Install dependencies
     - npm install
     # Build App
@@ -27,20 +25,18 @@ deploy prod:
     - tags
   script:
     - pip install awscli
-    - aws s3 sync ./dist s3://YOUR_BUCKET_NAME
+    - aws s3 sync ./dist s3://take.apeun.it
 
 build stage:
   image: node:10.15.0-stretch
   stage: build
   only:
-    - master
+    - develop
   script:
-    # Install vuecli
-    - npm install -g @vue/cli@latest
     # Install dependencies
     - npm install
     # Build App
-    - npm run build-dev
+    - npm run build
   artifacts:
     paths:
       # Build folder
@@ -51,7 +47,8 @@ deploy stage:
   image: python:latest
   stage: deploy
   only:
-    - master
+    - develop
   script:
     - pip install awscli
-    - aws s3 sync ./dist s3://icecream.apeunit.com
+    - aws s3 sync ./dist s3://take.apeun.it
+    - aws cloudfront create-invalidation --distribution-id $CF_DISTRIBUTION_ID --paths '/*'

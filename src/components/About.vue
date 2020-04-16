@@ -1,6 +1,6 @@
 <template>
   <div class="app-about">
-    <go-back>Conversations</go-back>
+    <go-back>Back</go-back>
     <div class="app-about-apeunit">
       <div class="container pl-6 pr-6 flex px-4 text-28 font-sans leading-normal font-semibold">
         We are Ape Unit — an interdisciplinary tech hub in Berlin 🦍
@@ -33,6 +33,21 @@
         </p>
         <p class="py-4">
           Get in touch »<br/>
+          <a href="mailto:office@apeunit.com" target="_blank" rel="noopener" class="no-underline text-black">
+            office@apeunit.com
+          </a><br/>
+          +49 30 306 490 10
+        </p>
+      </div>
+        <div class="italic mt-4">
+        <p class="py-4">
+          Unsere Arbeit ist erfüllt von der Gier nach Neuem – Chancen entdecken und sie mit einem Team von Spezialisten ergreifen ist unsere Mission.
+        </p>
+        <p class="py-4">
+          Wir verbinden Projekt mit Prozess, Konzept mit Kommunikation, Visualisierung mit Implementierung,  verbessern Dienste und Geschäftsmodelle und finden neue Wege, wie wir Technologie nutzen und miteinander interagieren.
+        </p>
+        <p class="py-4">
+          Lass uns sprechen »<br/>
           <a href="mailto:office@apeunit.com" target="_blank" rel="noopener" class="no-underline text-black">
             office@apeunit.com
           </a><br/>

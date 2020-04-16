@@ -9,7 +9,7 @@
 import ArrowRight from './ArrowRight.vue'
 
 export default {
-  name: 'GoBack.vue',
+  name: 'GoBack',
   components: {
     ArrowRight
   }

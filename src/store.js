@@ -6,12 +6,16 @@ import QRCode from 'qrcode'
 import createPersistedState from 'vuex-persistedstate'
 
 Vue.use(Vuex)
-
+let initLang = navigator.language.split('-')[0] || navigator.userLanguage.split('-')[0]
+if (!initLang) {
+  initLang = 'en'
+}
 const store = new Vuex.Store({
   state: {
+    printingMessages: true,
     costToCharge: 0,
     chatStarted: false,
-    currentLang: 'en',
+    currentLang: initLang,
     account: {
       pub: null,
       priv: null,
@@ -38,9 +42,17 @@ const store = new Vuex.Store({
     scannedQR: null,
     burned: false,
     eventEnded: false,
-    receiver: null
+    receiver: null,
+
+    /**
+     * Modal state
+     */
+    modalOpened: false
   },
   getters: {
+    printingMessages (state) {
+      return state.printingMessages
+    },
     costToCharge (state) {
       return state.costToCharge
     },
@@ -88,6 +100,9 @@ const store = new Vuex.Store({
     }
   },
   mutations: {
+    setModalOpened (state, val) {
+      state.modalOpened = val
+    },
     setReceiver (state, val) {
       state.receiver = val
     },
@@ -124,6 +139,15 @@ const store = new Vuex.Store({
     setChatHistory (state, history) {
       state.chatHistory = history
     },
+    resetChatHistory (state, history) {
+      const cleanHistory = {
+        en: [],
+        de: []
+      }
+      state.chatHistory = cleanHistory
+      state.burned = false
+      state.eventEnded = false
+    },
     setAccount (state, {
       pub,
       priv,
@@ -142,7 +166,7 @@ const store = new Vuex.Store({
       }
     },
     setCurrentLang (state, lang) {
-      console.log(`setting ${lang}!`)
+      // console.log(`setting ${lang}!`)
       state.currentLang = lang
     },
     setAe (state, ae) {
@@ -159,6 +183,15 @@ const store = new Vuex.Store({
       lang
     }) {
       let clonedMsg = Object.assign({}, message)
+      /**
+       * add name to messages if account is not burned or seeyou and account is present.
+       * xyzxyz will be replaced by actual account name
+       */
+      if (state.account.name && state.account.name !== 'burned' && state.account.name !== 'seeyou') {
+        clonedMsg.content = clonedMsg.content.replace('xyzxyz', state.account.name)
+      } else {
+        clonedMsg.content = clonedMsg.content.replace('xyzxyz', '')
+      }
       if (!clonedMsg.time) {
         clonedMsg.time = new Date().toLocaleTimeString('en-US', {
           hour: 'numeric',
@@ -166,6 +199,8 @@ const store = new Vuex.Store({
           minute: 'numeric'
         })
       }
+      // eslint-disable-next-line
+      state.printingMessages = (clonedMsg.buttons || clonedMsg.id === 'burned' || clonedMsg.id === 'burned-2' || clonedMsg.id === 'burned-3' || clonedMsg.id === 'seeyou') ? false : true
       state.chatHistory[lang].push(clonedMsg)
     },
     removeMessage (state, {
@@ -173,10 +208,10 @@ const store = new Vuex.Store({
       lang
     }) {
       const newMessages = state.chatHistory[lang].filter(function (obj) {
-        console.log(obj.id !== messageId)
+        // console.log(obj.id !== messageId)
         return obj.id !== messageId
       })
-      console.log('newMessages', newMessages)
+      // console.log('newMessages', newMessages)
       state.chatHistory[lang] = newMessages
     },
     addBeerHash (state, beerHash) {
@@ -199,7 +234,7 @@ const store = new Vuex.Store({
       state.socketConnected = false
     },
     SOCKET_BAR_STATE (state, barState) {
-      console.log('SOCKET_BAR_STATE', barState)
+      // console.log('SOCKET_BAR_STATE', barState)
       if (Array.isArray(barState) && barState.length >= 0) {
         barState = barState[0]
       }
@@ -224,6 +259,7 @@ const store = new Vuex.Store({
           })
           .catch(e => {
             console.log(e)
+            commit('setBalanceLoading', false)
           })
       }
       return 0
@@ -232,13 +268,9 @@ const store = new Vuex.Store({
       commit(
         'setAe',
         await Ae({
-          url: 'https://sdk-testnet.aepps.com',
-          internalUrl: 'https://sdk-testnet.aepps.com',
-          networkId: 'ae_uat', // or any other networkId your client should connect to
-          keypair: {
-            secretKey: '',
-            publicKey: ''
-          }
+          url: 'https://testnet.aeternal.io',
+          internalUrl: 'https://testnet.aeternal.io',
+          compilerUrl: 'https://compiler.aepps.com'
         })
       )
     },
@@ -248,6 +280,7 @@ const store = new Vuex.Store({
        */
       let spendTx = null
       try {
+        // store.commit('setAccount', state.account)
         spendTx = await getters.client.spend(amount, receiver)
       } catch (e) {
         console.log(e)
@@ -258,15 +291,20 @@ const store = new Vuex.Store({
     },
     async generateQRURI ({ commit, state }, { data }) {
       const uri = await QRCode.toDataURL(data, {
-        errorCorrectionLevel: 'H'
+        errorCorrectionLevel: 'L'
       })
       return uri
     },
     async getPubkeyByName ({ commit, state }, { name }) {
-      // eslint-disable-next-line no-undef
-      const req = await fetch(`${state.websocketUrl}/rest/address/${name}`)
-      const address = (await req.json()).address
-      return address
+      try {
+        // eslint-disable-next-line no-undef
+        const req = await fetch(`${state.websocketUrl}/rest/address/${name}`)
+        const address = (await req.json()).address
+        return address
+      } catch (error) {
+        console.log(error)
+        return null
+      }
     }
   },
   plugins: [

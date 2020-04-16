@@ -3,11 +3,17 @@
 
     <!-- Message Content -->
     <div class="app-message-enter" v-show="msg.content">
-      <div class="app-spinner" v-if="msg.content === '...'">
+      <div class="app-spinner" v-if="msg.id === 'wait'">
         <div class="first"></div>
         <div class="second"></div>
         <div class="third"></div>
       </div>
+      <template v-else-if="msg.id === 'show-userpub-qr' || msg.id === 'show-order-qr'">
+        <qr-code user=""
+          :qrcode="msg.content"
+          :isOrder="(msg.id === 'show-order-qr')"
+        />
+      </template>
       <template v-else>
         <p class="font-sans-medium text-28" v-html="msg.content"></p>
         <p class="text-xs font-sans mt-2">{{ msg.time }}</p>
@@ -30,11 +36,16 @@
 <script>
 import formatUnit from '../filters'
 
-import { sign, verify, decodeBase58Check } from '@aeternity/aepp-sdk/es/utils/crypto.js'
-import { encode } from '@aeternity/aepp-sdk/es/tx/builder/helpers.js'
+import { sign } from '@aeternity/aepp-sdk/es/utils/crypto.js'
+import { encode, decode } from '@aeternity/aepp-sdk/es/tx/builder/helpers.js'
+import QrCode from './QrCode.vue'
+import merchantContract from '../../contract/merchant'
 
 export default {
   name: 'ChatMessage',
+  components: {
+    QrCode
+  },
   props: [
     'msg',
     'isLast'
@@ -48,6 +59,9 @@ export default {
     },
     costToCharge () {
       return this.$store.getters.costToCharge
+    },
+    chatStarted () {
+      return this.$store.getters.chatStarted
     },
     userBalance () {
       return this.$store.getters.userBalance
@@ -92,22 +106,21 @@ export default {
         setTimeout(() => resolve(fn(par)), 2000)
       })
     },
-    sendNextMessage (msg) {
-      const app = this
+    async sendNextMessage (msg) {
 
       if (msg.next) {
         // show waiting message
         this.playWaitMessage()
         // remove wait message and play next
-        this.wait(this.removeWaitMessage, { locale: app.$i18n.locale }).then(function () {
-          // play next message (from computer)
-          // console.log(`pick and play ID: ${msg.next}`)
-          // console.log(`from`, app.chatMessagesList[app.$i18n.locale])
-          const nextMsg = app.chatMessagesList[app.$i18n.locale].find(o => o.id === msg.next)
-          // console.log(`NEXT:`, nextMsg)
-          app.$store.commit('addMessage', { message: nextMsg, lang: app.$i18n.locale })
-          app.$store.commit('cleanNextMessages')
-        })
+        await this.wait(this.removeWaitMessage, { locale: this.$i18n.locale })
+        // play next message (from computer)
+        // console.log(`pick and play ID: ${msg.next}`)
+        // console.log(`from`, this.chatMessagesList[this.$i18n.locale])
+        const nextMsg = this.chatMessagesList[this.$i18n.locale].find(o => o.id === msg.next)
+        // console.log(`NEXT:`, nextMsg)
+        this.$store.commit('addMessage', { message: nextMsg, lang: this.$i18n.locale })
+        // console.log('cleanNextMessages --- beforeDestroy chatMessage')
+        this.$store.commit('cleanNextMessages')
       }
     },
     playWaitMessage () {
@@ -133,35 +146,30 @@ export default {
       message.content = arg > 1 || isNaN(arg) ? message.content + 's' : message.content
       this.$store.commit('addMessage', { message, lang: this.$i18n.locale })
 
-      let amount = isNaN(arg) ? (this.userBalance - this.$store.state.fee) : arg * this.$store.state.itemPrice
+      let amount = isNaN(arg) ? ((Number(formatUnit(this.userBalance)) * this.$store.state.itemPrice) - this.$store.state.fee) : arg * this.$store.state.itemPrice
       amount     = amount < 0 ? 0 : amount
-      if (this.userBalance >= (amount + this.$store.state.fee)) {
+      if (this.userBalance >= (amount + this.$store.state.fee) && amount > 0) {
         this.$store.commit('setCostToCharge', amount)
         const msg = this.chatMessagesList[this.$i18n.locale].find(o => o.id === 'transfer-type-choice')
         this.$store.commit('addMessage', { message: msg, lang: this.$i18n.locale })
       } else {
-        const msg = this.chatMessagesList[this.$i18n.locale].find(o => o.id === 'not-enough-balance')
+        const msg = this.chatMessagesList[this.$i18n.locale].find(o => o.id === 'not-enough-balance-transfer')
         this.$store.commit('addMessage', { message: msg, lang: this.$i18n.locale })
       }
     },
-    scanQR () {
-      const message = Object.assign({}, this.chatMessagesList[this.$i18n.locale].find(o => o.id === 'select-qr-scan'))
-      this.$store.commit('addMessage', { message, lang: this.$i18n.locale })
-      this.$router.push({ path: `/scan` })
-    },
-    async searchAddrByName () {
-      const name = prompt('enter user name?')
-      if (name) {
-        const receiver = await this.$store.dispatch('getPubkeyByName', { name })
-        this.$store.commit('setScanQR', receiver)
-        let message = Object.assign({}, this.chatMessagesList[this.$i18n.locale].find(o => o.id === 'transfer-input-user'))
-        message.content = message.content.replace('xxx', name)
+    scanQR (arg) {
+      if (arg == 'reset') {
+        const message = Object.assign({}, this.chatMessagesList[this.$i18n.locale].find(o => o.id === 'select-qr-scan'))
         this.$store.commit('addMessage', { message, lang: this.$i18n.locale })
-
-        // message  = Object.assign({}, this.chatMessagesList[this.$i18n.locale].find(o => o.id === 'transfer-confirmation-1'))
-        // this.$store.commit('addMessage', { message, lang: this.$i18n.locale })
+        this.$router.push({ path: `/scan` })
+      } else {
+        const message = Object.assign({}, this.chatMessagesList[this.$i18n.locale].find(o => o.id === 'select-qr-scan'))
+        this.$store.commit('addMessage', { message, lang: this.$i18n.locale })
+        this.$router.push({ path: `/scan` })
       }
-
+    },
+    searchAddrByName () {
+      this.$store.commit('setModalOpened', true)
     },
     orderIceCream () {
       const message = this.chatMessagesList[this.$i18n.locale].find(o => o.id === 'order')
@@ -177,7 +185,7 @@ export default {
     saveOrder (arg) {
       const order   = Object.assign({}, this.chatMessagesList[this.$i18n.locale].find(o => o.id === 'show-order-details'))
       order.content = order.content.replace('xxx', arg)
-      order.content = arg > 1 ? order.content + 's' : order.content
+      // order.content = arg > 1 ? order.content + 's' : order.content
       this.$store.commit('addMessage', { message: order, lang: this.$i18n.locale })
 
       const amount = arg * this.$store.state.itemPrice
@@ -202,10 +210,11 @@ export default {
 
       const order2 = this.chatMessagesList[this.$i18n.locale].find(o => o.id === 'post-order-message-2')
       this.$store.commit('addMessage', { message: order2, lang: this.$i18n.locale })
-
-      const txHash    = await this.$store.dispatch('transfer', {
+      const cInstance = await this.$store.state.ae.getContractInstance(merchantContract, { contractAddress: 'ct_WbMSB4FySwzJhCmNsDjxm5P7nefMJGdzuoxc3VfUhzsTyvta2' })
+      const { decodedResult: barAddress } = await cInstance.methods.get_merchant()
+      const txHash = await this.$store.dispatch('transfer', {
         amount: this.costToCharge,
-        receiver: this.$store.state.barPubKey
+        receiver: barAddress
       })
 
       if(!txHash) {
@@ -223,7 +232,9 @@ export default {
         'time': null
       }
       const order3    = this.chatMessagesList[this.$i18n.locale].find(o => o.id === 'post-order-message-3')
+      const order4    = this.chatMessagesList[this.$i18n.locale].find(o => o.id === 'post-order-message-4')
       this.$store.commit('addMessage', { message: order3, lang: this.$i18n.locale })
+      this.$store.commit('addMessage', { message: order4, lang: this.$i18n.locale })
       this.$store.commit('addMessage', { message: txMessage, lang: this.$i18n.locale })
 
       const afterOrder = this.chatMessagesList[this.$i18n.locale].find(o => o.id === 'question-main-2')
@@ -231,7 +242,7 @@ export default {
     },
     getFreeCoin () {
       const message = Object.assign({}, this.chatMessagesList[this.$i18n.locale].find(o => o.id === 'tweet'))
-      const url     = this.$store.state.twitterBase + encodeURIComponent(message.content.replace('xxx', this.$store.state.account.pub))
+      const url     = this.$store.state.twitterBase + encodeURIComponent(message.content.replace('xxx', this.$store.state.account.pub).replace('yyy', this.$store.state.account.name))
       const win     = window.open(url, '_blank')
       win.focus()
 
@@ -239,6 +250,9 @@ export default {
       this.$store.commit('addMessage', { message: postTweet, lang: this.$i18n.locale })
     },
     async showQR (arg) {
+      const qrShow = Object.assign({}, this.chatMessagesList[this.$i18n.locale].find(o => o.id === 'show-my-qr'))
+      this.$store.commit('addMessage', { message: qrShow, lang: this.$i18n.locale })
+
       const dataURI   = await this.$store.dispatch('generateQRURI', { data: this.$store.state.account.pub })
       const img       = `<img src="${dataURI}" alt="order" height="300" width="300">`
       const txMessage = {
@@ -257,14 +271,15 @@ export default {
     },
     startConvo () {
       // start chat, by picking first message.
-      if (!this.chatStarted) {
+      const welcomePrinted = this.chatHistory[this.$i18n.locale].find(o => o.id === 'welcome-1')
+      if (!this.chatStarted || !welcomePrinted) {
         const firstMsg = this.chatMessagesList[this.$i18n.locale].find(o => o.id === 'welcome-1')
         this.$store.commit('addMessage', { message: firstMsg, lang: this.$i18n.locale })
         this.$store.commit('setChatStarted', true)
       }
     },
     signHash (txHash, privateKey) {
-      const sig        = sign(Buffer.from(txHash), Buffer.from(privateKey, 'hex'))
+      const sig        = sign(decode(txHash), Buffer.from(privateKey, 'hex'))
       const encodedSig = encode(sig, 'sg')
       console.log('signHash encoded', encodedSig)
       return encodedSig
@@ -287,7 +302,7 @@ export default {
   async mounted () {
     // send next message, if first message has a "next"
     this.sendNextMessage(this.msg)
-    console.log('Mounted: message component', this.msg)
+    // console.log('Mounted: message component', this.msg)
     Array.from(document.getElementsByClassName('order-qr')).forEach((el) => {
       const elClone = el.cloneNode(true)
       elClone.addEventListener('click', this.handleQRClicks)
@@ -306,9 +321,12 @@ export default {
 }
 </script>
 <style lang="css">
+.location-chat-image {
+  background-color: black
+}
+
 .app-message-enter {
   animation: slide-in-up 0.5s ease-out;
-  transition: all 0.3s;
 }
 
 .app-action-button {

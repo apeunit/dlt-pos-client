@@ -5,21 +5,23 @@
     scrollonremoved: true
   }">
     <template v-if="account && account.pub">
-      <transition-group name="list" tag="ul" class="list-reset container">
-        <li :key="$index"
-            :class="msgClass(msg)"
-            v-for="(msg, $index) in chatHistory[$i18n.locale]"
+      <ul class="list-reset">
+        <li
+          :class="msgClass(msg)"
+          v-for="(msg, $index) in chatHistory[$i18n.locale]"
+          :data-message-id="msg.id"
+          :key="$index"
         >
           <chat-message
             :isLast="$index == chatHistory[$i18n.locale].length - 1"
             :msg="msg"
           />
         </li>
-      </transition-group>
+      </ul>
     </template>
-    <div class="h-full flex items-center content-center justify-center" v-else>
+    <router-link to="/about" class="h-full flex items-center justify-center text-black no-underline" v-else>
       <span>Loading...</span>
-    </div>
+    </router-link>
   </div>
 </template>
 <script>
@@ -69,29 +71,47 @@ export default {
       account = JSON.parse(acc)
     }
     if(this.eventEnded || account.pub === 'seeyou') {
-      this.$store.commit('setChatStarted', true)
-      this.$store.commit('setChatHistory', {en:[], de: []})
-      const firstMsg = this.chatMessagesList[this.$i18n.locale].find(o => o.id === 'bye-bye-1')
-      this.$store.commit('addMessage', { message: firstMsg, lang: this.$i18n.locale })
+      this.$store.commit('resetChatHistory')
+      setTimeout(()=>{
+        const firstMsg = this.chatMessagesList[this.$i18n.locale].find(o => o.id === 'bye-bye-1')
+        this.$store.commit('addMessage', { message: firstMsg, lang: this.$i18n.locale })
+      }, 1000)
     } else if(this.burned || account.pub === 'burned') {
-      this.$store.commit('setChatStarted', true)
-      this.$store.commit('setChatHistory', {en: [], de: []})
-      const intro = Object.assign({}, this.chatMessagesList[this.$i18n.locale].find(o => o.id === 'intro'))
-      delete intro.next
-      this.$store.commit('addMessage', { message: intro, lang: this.$i18n.locale })
+      this.$store.commit('resetChatHistory')
+      setTimeout(()=>{
+        const intro = Object.assign({}, this.chatMessagesList[this.$i18n.locale].find(o => o.id === 'intro'))
+        delete intro.next
+        this.$store.commit('addMessage', { message: intro, lang: this.$i18n.locale })
 
-      const welcome = Object.assign({}, this.chatMessagesList[this.$i18n.locale].find(o => o.id === 'welcome-2'))
-      welcome.next = "ape-coin-usage"
-      this.$store.commit('addMessage', { message: welcome, lang: this.$i18n.locale })
+        let welcome = Object.assign({}, this.chatMessagesList[this.$i18n.locale].find(o => o.id === 'welcome-2'))
+        welcome.next = 'ape-coin-usage'
+        this.$store.commit('addMessage', { message: welcome, lang: this.$i18n.locale })
+      }, 1000)
+
     } else if (!this.chatStarted) {
+      // print first message
       const firstMsg = this.chatMessagesList[this.$i18n.locale].find(o => o.id === 'intro')
       this.$store.commit('addMessage', { message: firstMsg, lang: this.$i18n.locale })
       this.$store.commit('setChatStarted', true)
+
+      // print the (first 2) messages in the other language (to have them ready when refreshing)
+      if(this.$i18n.locale === 'en'){
+        const firstMsgDe = this.chatMessagesList.de.find(o => o.id === 'intro')
+        this.$store.commit('addMessage', { message: firstMsgDe, lang: "de" })
+        const secondMsgDe = this.chatMessagesList.de.find(o => o.id === 'intro-2')
+        this.$store.commit('addMessage', { message: secondMsgDe, lang: "de" })
+      } else {
+        const firstMsgEn = this.chatMessagesList.en.find(o => o.id === 'intro')
+        this.$store.commit('addMessage', { message: firstMsgEn, lang: "en" })
+        const secondMsgEn = this.chatMessagesList.en.find(o => o.id === 'intro-2')
+        this.$store.commit('addMessage', { message: secondMsgEn, lang: "en" })
+      }
     }
   },
   beforeDestroy () {
     // remove ".next" prop to already printed messages
     // so they won't re-printed when ChatMessage.vue gets mounted()
+    // console.log('cleanNextMessages --- beforeDestroy chatArea')
     this.$store.commit('cleanNextMessages')
   }
 }
@@ -101,14 +121,5 @@ export default {
   @apply h-full w-full pt-20 pl-6 pr-6;
   @apply bg-white text-black;
   @apply overflow-x-hidden overflow-y-auto;
-}
-
-.list-enter-active, .list-leave-active {
-  transition: all 0.5s;
-}
-
-.list-enter, .list-leave-to {
-  opacity: 0;
-  transform: translateY(30px);
 }
 </style>

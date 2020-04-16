@@ -45,7 +45,7 @@ export default {
   methods: {
     async getBeerState (txHash) {
       return new Promise((resolve, reject) => {
-        console.log('asking beer state')
+        // console.log('asking beer state')
         this.$socket.emit('was_beer_scanned', txHash, (beerState) => {
           console.log('beerState', beerState)
           if (beerState && typeof beerState.scanned === 'boolean') {

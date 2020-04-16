@@ -1,6 +1,6 @@
 <template>
   <div class="about">
-    <go-back>Conversations</go-back>
+    <go-back>Back</go-back>
     <div class="bg-black text-white pb-8 pt-24">
       <div class="container flex flex-col px-4 text-28 font-sans leading-normal">
         <template v-if="isBalanceLoading">Getting balance...</template>
@@ -17,7 +17,7 @@
           <span>
             My Transactions
           </span>
-          <ArrowRight class=""/>
+          <ArrowRight />
         </a>
         <div class="mt-8 text-2xl font-sans flex flex-wrap flex-col justify-between no-underline text-black">
           <span>
@@ -28,10 +28,16 @@
           <span class="mt-6">
             Unique Name
           </span>
-          Prenzlauer Allee 169
-
+          <p class="font-mono">
+          {{ getUserName }}
+          </p>
           <p class="text-base font-sans mt-4">
-            The identicon and random unique name make your public key easy to recognize and share.
+            We assigned a unique name to your pub key to make it easier for others to interact with you.
+            Your identicon is a visual representation of your public key. I helps you to ensure the right public key is used in transactions.
+          </p>
+          <p class="text-base italic mt-4">
+            Wir haben Dir einen einzigartigen Namen zugewiesen, damit andere Blockchain User einfacher mit Dir interagieren können.
+            Dein Identicon ist eine visuelle Darstellung Deines Public Key. Er hilft Dir sicher zu stellen, dass bei Transaktionen der richtige Public Key verwendet wird.
           </p>
         </div>
         <div class="mt-8 mb-8 text-2xl font-sans flex flex-wrap flex-col justify-between no-underline text-black">
@@ -39,14 +45,20 @@
             My Public Key
           </span>
           <ul class="app-address list-reset">
-            <li class="font-mono" v-for="(chunk, index) in splitAddress" :key="">
+            <li class="font-mono" v-for="(chunk, index) in splitAddress" :key="index">
               {{ chunk }}
             </li>
           </ul>
           <p class="text-base font-sans mt-4">
-            The public key is your address. This cryptographic code allows users to receive cryptocurrencies.
+            You can imagine your public key as the address of your account. It's not easy to read and write for humans. Therefore assigned a human friendly uniqe name to your public key.
+          </p>
+          <p class="text-base italic mt-4">
+            Man kann sich den Public Key wie eine Adresse zu Deinem Account vorstellen. Da er für uns Menschen schwer zu lesen und schreiben ist, haben wir Deiner Adresse einen eindeutigen Namen zugeordnet.
           </p>
         </div>
+        <!-- <div class="mt-8 mb-8 text-2xl font-sans flex flex-wrap flex-col justify-between">
+          <a @click.prevent="resetStorage" class="text-black" href="#">Reset message history</a>
+        </div> -->
       </div>
 
     </div>
@@ -95,6 +107,14 @@ export default {
     },
     isBalanceLoading () {
       return this.$store.state.isBalanceLoading
+    },
+    getUserName () {
+       return this.$store.state.account.name
+    }
+  },
+  methods: {
+    resetStorage () {
+      window.localStorage.removeItem('vuex')
     }
   },
   mounted () {
